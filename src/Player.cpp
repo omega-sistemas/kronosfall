@@ -71,7 +71,7 @@ void Player::refreshSkillVectors() {
     for (size_t i = 0; i < skills.size(); ++i) {
         skills[i].damage   = baseSkillDamage[i]  * skillPower * st.skillMult;
         skills[i].range    = baseSkillRange[i]   * st.rangeMult;
-        skills[i].cooldown = baseSkillCool[i]    * cdEvoMult * st.cdMult;
+        skills[i].cooldown = baseSkillCool[i]    * cdEvoMult * cdFusionMult * st.cdMult;
     }
 }
 
@@ -1078,7 +1078,9 @@ bool Player::tryFuseItems() {
                     health = std::min(health + 60.0f, maxHealth); break;
                 case ItemType::TechChip:    addXP(200); break;
                 case ItemType::PlasmaCell:
-                    for (auto& sk : skills) { sk.cooldown *= 0.85f; sk.currentCooldown = 0.0f; } break;
+                    cdFusionMult *= 0.85f;
+                    for (auto& sk : skills) sk.currentCooldown = 0.0f;
+                    break;
                 case ItemType::EnergyCore:
                     shieldTimer = 6.0f; overloadTimer = 4.0f; break;
                 case ItemType::ScrapMetal:
@@ -1163,7 +1165,9 @@ void Player::takeDamage(float amount) {
     if (isShielded()) return;
     auto st = SkillTree::statsFor(perkMask);
     if (st.evade > 0.0f && (rand() % 100) < (int)(st.evade * 100.0f)) return;
-    float reduced = amount * (1.0f - defense / 100.0f);
+    // Clamp defense to 99% max reduction to prevent healing from damage
+    float effectiveDefense = std::min(defense, 99.0f);
+    float reduced = amount * (1.0f - effectiveDefense / 100.0f);
     health -= reduced;
     if (health < 0.0f && st.revive && reviveReady) {
         reviveReady = false;
@@ -1315,14 +1319,25 @@ void Player::applyEquipmentStats() {
     if (!equippedWeapon.isEmpty()) {
         attackDamage += equippedWeapon.getEffectivePrimary();
         attackRange  += equippedWeapon.getEffectiveSecondary();
+        // Afixos da arma
+        attackDamage += equippedWeapon.bonusDamage;
+        attackRange  += equippedWeapon.bonusSpeed;  // bonusSpeed em arma = alcance extra
+        // bonusHealth, bonusDefense, bonusCrit, bonusVampirism nao se aplicam a arma
     }
     if (!equippedArmor.isEmpty()) {
         maxHealth += equippedArmor.getEffectivePrimary();
         defense   += equippedArmor.getEffectiveSecondary();
+        // Afixos da armadura
+        maxHealth  += equippedArmor.bonusHealth;
+        defense    += equippedArmor.bonusDefense;
+        speed      += equippedArmor.bonusSpeed;
     }
     if (!equippedImplant.isEmpty()) {
         speed        += equippedImplant.getEffectivePrimary();
         xpMultiplier  = (equippedImplant.getEffectiveSecondary() > 0.0f) ? equippedImplant.getEffectiveSecondary() : 1.0f;
+        // Afixos do implante
+        speed      += equippedImplant.bonusSpeed;
+        attackDamage += equippedImplant.bonusDamage;
     }
 
     // Bonus de evolucao aplicados AQUI (e nao com *= direto), para nao serem

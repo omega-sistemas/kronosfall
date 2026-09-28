@@ -295,7 +295,7 @@ void DarkWorld::drawCityBuilding(Vector2 pos, float w, float h, float time) {
     }
 
     // Graffiti at base
-    DrawText("DARKNET", x + 4, (int)(pos.y - 14), 7, ColorAlpha({200, 0, 255, 255}, 0.5f));
+    DrawText("KRONOSFALL", x + 4, (int)(pos.y - 14), 7, ColorAlpha({200, 0, 255, 255}, 0.5f));
 }
 
 void DarkWorld::drawSilo(Vector2 pos, float scale) {

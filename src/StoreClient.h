@@ -21,7 +21,7 @@ public:
     int         port      = 9000;
     // Prefixo de rota quando a API fica atrás do gateway nginx (/api/* -> /api).
     // Vazio = conexão direta no game-server (dev local). Configurado pelo jogo
-    // via DARKNET_API_URL (ex.: "https://darknet.seudominio.com" -> /api + TLS).
+    // via KRONOSFALL_API_URL (ex.: "https://kronosfall.seudominio.com" -> /api + TLS).
     std::string apiPrefix = "";
     bool        useTls    = false;   // HTTPS (WinHTTP) na API configurada
 

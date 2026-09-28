@@ -30,6 +30,7 @@
 #include "NetClient.h"
 #include "StoreClient.h"
 #include "GfxResource.h"
+#include "InputMap.h"
 #include <vector>
 #include <string>
 #include <raylib.h>
@@ -166,6 +167,7 @@ private:
     ParticleSystem                particles;
     AudioManager                  audio;
     Background                    background;
+    InputMap                      input;      // key rebinding system
 
     Camera2D camera;
 

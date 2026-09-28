@@ -223,6 +223,7 @@ private:
     std::vector<float> baseSkillRange;    // alcance base das skills (perks recomputam dos originais)
     std::vector<float> baseSkillCool;     // cooldown base das skills (idem)
     float cdEvoMult = 1.0f;               // reducoes de cooldown por evolucao (lv 10/25/40/60)
+    float cdFusionMult = 1.0f;            // reducoes de cooldown por fusao PlasmaCell (persistente)
 
     // Render de corpo por classe (formatos distintos)
     Color accentNow() const;  // accent considerando overload/escudo

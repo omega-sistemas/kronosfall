@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(DarknetPrototype LANGUAGES CXX)
+project(Kronosfall LANGUAGES CXX)
 
 # Compat: raylib 5.0 declares an old cmake_minimum_required that CMake >= 3.31
 # rejects. Keeps FetchContent working on newer toolchains.

@@ -128,7 +128,7 @@ static Sound sfxSynth(int SR, int N, const std::vector<float>& samples) {
 
 // LA Ruins: Deep post-apocalyptic dark ambient â€” haunting melody, doom pulse, debris
 // ═══════════════════════════════════════════════════════════════════════════
-//  DARKNET — MOTOR DE COMPOSICAO (trilha oficial em camadas)
+//  KRONOSFALL — MOTOR DE COMPOSICAO (trilha oficial em camadas)
 //  Tema principal compartilhado: progressao Am–F–C–G (la menor epico/synthwave)
 //  com um motivo melodico reconhecivel que aparece em todas as zonas.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -328,7 +328,7 @@ static void addHat(std::vector<float>& mix, int SR, double startT, float amp) {
     }
 }
 
-// Compoe a faixa completa (todas as camadas) usando o tema DARKNET.
+// Compoe a faixa completa (todas as camadas) usando o tema KRONOSFALL.
 static std::vector<short> composeTrack(int SR, int N, const TrackStyle& st) {
     std::vector<float> mix(N, 0.0f);
 
@@ -505,7 +505,7 @@ std::vector<short> AudioManager::synthCore(int SR, int N) {
 
 // Main menu theme: epic cinematic â€” KRONOS-style sweeping intro
 std::vector<short> AudioManager::synthMenu(int SR, int N) {
-    // ★ TEMA PRINCIPAL OFICIAL DO DARKNET ★ — synthwave epico Am–F–C–G
+    // ★ TEMA PRINCIPAL OFICIAL DO KRONOSFALL ★ — synthwave epico Am–F–C–G
     { TrackStyle st; st.bpm = 92.0f; st.hardDrums = false;
     // PERFIL ACUSTICO — menu: espacoso e limpo
     st.cutoffHz = 5200.0f; st.room = 0.68f; st.wet = 0.34f; st.subAmp = 0.16f;

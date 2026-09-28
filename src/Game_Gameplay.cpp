@@ -2,6 +2,7 @@
 // Mesma classe Game: Game::update (loop principal) e Game::handleInput.
 #include "Game.h"
 #include "SkillTree.h"
+#include "Item.h"
 #include <raylib.h>
 #include <raymath.h>
 #include "rlgl.h"
@@ -62,18 +63,19 @@ void Game::update(float dt) {
         if (playerSpeechTimer > 0.0f) playerSpeechTimer -= dt;
         audio.updateMusic();
         // ESC fecha sem gastar
-        if (IsKeyPressed(KEY_ESCAPE)) {
+        if (input.isPressedOnce(Action::NavCancel)) {
             showLevelUpScreen = false; showEvolutionScreen = false;
             return;
         }
         if (showEvolutionScreen) {
-            if (IsKeyPressed(KEY_LEFT))  evolutionChoice = (evolutionChoice - 1 + 3) % 3;
-            if (IsKeyPressed(KEY_RIGHT)) evolutionChoice = (evolutionChoice + 1) % 3;
+            if (input.isPressedOnce(Action::NavLeft))  evolutionChoice = (evolutionChoice - 1 + 3) % 3;
+            if (input.isPressedOnce(Action::NavRight)) evolutionChoice = (evolutionChoice + 1) % 3;
             int chosen = -1;
-            if (IsKeyPressed(KEY_A)) chosen = 0;
-            if (IsKeyPressed(KEY_S)) chosen = 1;
-            if (IsKeyPressed(KEY_D)) chosen = 2;
-            if (IsKeyPressed(KEY_ENTER)) chosen = evolutionChoice;
+            if (input.isPressedOnce(Action::NavSelect)) chosen = evolutionChoice;
+            // Also allow 1/2/3 keys
+            if (input.isPressedOnce(Action::Skill1)) chosen = 0;
+            if (input.isPressedOnce(Action::Skill2)) chosen = 1;
+            if (input.isPressedOnce(Action::Skill3)) chosen = 2;
             if (chosen >= 0) {
                 applyEvolutionPath(chosen);
                 if (pendingEvolutions > 0) pendingEvolutions--;
@@ -81,13 +83,14 @@ void Game::update(float dt) {
                 if (pendingEvolutions <= 0) showEvolutionScreen = false;
             }
         } else {
-            if (IsKeyPressed(KEY_LEFT))  levelUpChoice = (levelUpChoice - 1 + 3) % 3;
-            if (IsKeyPressed(KEY_RIGHT)) levelUpChoice = (levelUpChoice + 1) % 3;
+            if (input.isPressedOnce(Action::NavLeft))  levelUpChoice = (levelUpChoice - 1 + 3) % 3;
+            if (input.isPressedOnce(Action::NavRight)) levelUpChoice = (levelUpChoice + 1) % 3;
             int chosen = -1;
-            if (IsKeyPressed(KEY_ONE))   chosen = 0;
-            if (IsKeyPressed(KEY_TWO))   chosen = 1;
-            if (IsKeyPressed(KEY_THREE)) chosen = 2;
-            if (IsKeyPressed(KEY_ENTER)) chosen = levelUpChoice;
+            if (input.isPressedOnce(Action::NavSelect)) chosen = levelUpChoice;
+            // Also allow 1/2/3 keys
+            if (input.isPressedOnce(Action::Skill1)) chosen = 0;
+            if (input.isPressedOnce(Action::Skill2)) chosen = 1;
+            if (input.isPressedOnce(Action::Skill3)) chosen = 2;
             if (chosen >= 0) {
                 applyLevelUpChoice(chosen);
                 if (pendingLevelUps > 0) pendingLevelUps--;
@@ -107,7 +110,7 @@ void Game::update(float dt) {
     if (pendingNotifyPulse > 0.0f) pendingNotifyPulse -= dt;
 
     // Abrir a Hack Tree quando o JOGADOR quiser (tecla X)
-    if (IsKeyPressed(KEY_X) && !inMainMenu && !paused &&
+    if (input.isPressedOnce(Action::SkillTree) && !inMainMenu && !paused &&
         !showLevelUpScreen && !showEvolutionScreen && player.health > 0.0f) {
         if (showSkillTree) { showSkillTree = false; return; }
         shopSystem.close(); craftingSystem.open = false;
@@ -190,23 +193,30 @@ void Game::update(float dt) {
     player.petDrone        = store.ownsItem("pet_drone");
     craftingSystem.update(dt);
 
+    // SlowMo timer (boss kill cinematic) — affects gameplay updates
+    float effectiveDt = dt;
+    if (slowMoTimer > 0.0f) {
+        slowMoTimer -= dt;
+        effectiveDt = dt * 0.25f;
+    }
+
     handleInput(dt);
 
     // Tutorial / achievement systems update (after input, before physics/combat)
-    tutorial.update(dt);
+    tutorial.update(effectiveDt);
     if (!tutorial.active && tutorial.currentStep == TutorialStep::Completed && !tutorialRewardGiven) {
         tutorialRewardGiven = true;
         player.xp      += 500;
         player.credits += 100;
     }
-    achievements.update(dt);
+    achievements.update(effectiveDt);
     totalPlaytime += dt;
     achievements.onPlaytime(totalPlaytime / 60.0f);
 
-    player.update(dt);
-    updateCompanions(dt);
-    particles.update(dt);
-    background.update(dt);
+    player.update(effectiveDt);
+    updateCompanions(effectiveDt);
+    particles.update(effectiveDt);
+    background.update(effectiveDt);
     audio.updateMusic();
 
     // Light system — dark zone detection and flicker
@@ -290,15 +300,13 @@ void Game::update(float dt) {
             lightSystem.updateFlicker(dt);
             lightSystem.updatePlayerPos(player.position);
         }
-    }
 
-    // SlowMo timer
+    // SlowMo timer (boss kill cinematic) — affects gameplay updates
     float effectiveDt = dt;
     if (slowMoTimer > 0.0f) {
         slowMoTimer -= dt;
         effectiveDt = dt * 0.25f;
     }
-    (void)effectiveDt; // used for visual effects in future
 
     // Screen shake — sinusoidal decay
     // Session time + story banner timer
@@ -497,7 +505,7 @@ void Game::update(float dt) {
         float d = Vector2Distance(player.position, ge.position);
         if (d < nearEquipDist) { nearEquipIdx = i; nearEquipDist = d; }
     }
-    if (nearEquipIdx >= 0 && IsKeyPressed(KEY_E) && !dialogOpen) {
+    if (nearEquipIdx >= 0 && input.isPressedOnce(Action::Interact) && !dialogOpen) {
         player.equipItem(groundEquips[nearEquipIdx].equip);
         groundEquips[nearEquipIdx].collected = true;
         audio.playPickup();
@@ -1169,6 +1177,12 @@ void Game::update(float dt) {
                                      (roll < 4) ? EDB::armaduraAvan()  : EDB::neuralLink(); break;
                         default: eq = EDB::canhaoEMP(); break;
                     }
+                    // Add random affixes based on elite tier (higher tier = better rarity)
+                    ItemRarity rarity = (tier >= 2) ? ItemRarity::Rare : ItemRarity::Uncommon;
+                    if (GetRandomValue(0, 100) < 15) rarity = ItemRarity::Epic;
+                    if (GetRandomValue(0, 100) < 3)  rarity = ItemRarity::Legendary;
+                    eq = EDB::withRandomAffixes(eq, rarity);
+
                     if (!eq.isEmpty()) {
                         float ang = (float)GetRandomValue(0, 628) / 100.0f;
                         GroundEquipment ge;
@@ -1177,7 +1191,12 @@ void Game::update(float dt) {
                         ge.equip    = eq;
                         groundEquips.push_back(ge);
                     }
-                    items.push_back(Item::createEliteDrop(it->position));
+                    // Elite drop: sometimes equipment (with affixes), sometimes materials
+                    if (GetRandomValue(0, 100) < 30) {
+                        items.push_back(Item::createWeaponDrop(it->position));
+                    } else {
+                        items.push_back(Item::createEliteDrop(it->position));
+                    }
                     particles.spawnLevelUp(it->position);
                 }
 
@@ -1316,7 +1335,8 @@ void Game::update(float dt) {
         if (q.isComplete() && !q.rewardGiven) {
             grantQuestRewards(q);
         }
-    }
+}
+}
 }
 
 void Game::movePlayerWithSlide(Vector2 direction, float dt) {
@@ -1541,10 +1561,9 @@ void Game::handleInput(float dt) {
         }
     }
 
-    // ── Selecao RTS por arrasto do mouse esquerdo ─────────────────────────────
     // ── Selecao RTS: SO com SHIFT segurado (esquerdo sozinho = andar) ─────────
     // Assim segurar o esquerdo para CAMINHAR nunca desenha caixa de selecao.
-    bool selectMod = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
+    bool selectMod = input.isPressed(Action::RTSSelectModifier);
     if (!buildingSystem.buildModeActive && !dialogOpen) {
         if (selectMod && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !producedThisClick) {
             rtsDragStart = mouseWorld;
@@ -1579,19 +1598,19 @@ void Game::handleInput(float dt) {
         tutorial.onPlayerMoved();
     }
 
-    // CORRER (segurar SHIFT) e PULAR (ESPAÇO) — pulo cruza obstaculos baixos
-    player.sprinting = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
-    if (IsKeyPressed(KEY_SPACE)) { player.startJump(); audio.playFootstep(); }
+    // CORRER (segurar SHIFT via InputMap) e PULAR (ESPAÇO) — pulo cruza obstaculos baixos
+    player.sprinting = input.isPressed(Action::Sprint);
+    if (input.isPressedOnce(Action::Jump)) { player.startJump(); audio.playFootstep(); }
     // Durante o pulo a colisao com parede e relaxada (passa por cima)
     bool airborne = player.isJumping && player.jumpZ > 8.0f;
 
     // WASD also sets move direction (alternative control)
     {
         Vector2 wasd = {0, 0};
-        if (IsKeyDown(KEY_W)) wasd.y -= 1.0f;
-        if (IsKeyDown(KEY_S)) wasd.y += 1.0f;
-        if (IsKeyDown(KEY_A)) wasd.x -= 1.0f;
-        if (IsKeyDown(KEY_D)) wasd.x += 1.0f;
+        if (input.isPressed(Action::MoveUp))    wasd.y -= 1.0f;
+        if (input.isPressed(Action::MoveDown))  wasd.y += 1.0f;
+        if (input.isPressed(Action::MoveLeft))  wasd.x -= 1.0f;
+        if (input.isPressed(Action::MoveRight)) wasd.x += 1.0f;
         float wlen = std::sqrt(wasd.x*wasd.x + wasd.y*wasd.y);
         if (wlen > 0.0f) {
             if (airborne) {
@@ -1686,7 +1705,7 @@ void Game::handleInput(float dt) {
     }
 
     // Skill 1 - Laser (piercing: fires 3 staggered beams; Perfurador adiciona mais)
-    if (IsKeyPressed(KEY_ONE) && player.skills[0].isReady()) {
+    if (input.isPressedOnce(Action::Skill1) && player.skills[0].isReady()) {
         player.useSkill(0, mouseWorld);
         tutorial.onSkillUsed();
         float dmg = player.getEffectiveDamage() + player.skills[0].damage;
@@ -1709,7 +1728,7 @@ void Game::handleInput(float dt) {
     }
 
     // Skill 2 - EMP Area (com empurrao de controle)
-    if (IsKeyPressed(KEY_TWO) && player.skills[1].isReady()) {
+    if (input.isPressedOnce(Action::Skill2) && player.skills[1].isReady()) {
         player.useSkill(1, mouseWorld);
         tutorial.onSkillUsed();
         float empDmg = player.skills[1].damage * (player.isOverloaded() ? 1.5f : 1.0f);
@@ -1729,7 +1748,7 @@ void Game::handleInput(float dt) {
     }
 
     // Skill 3 - Plasma Grenade
-    if (IsKeyPressed(KEY_THREE) && player.skills[2].isReady()) {
+    if (input.isPressedOnce(Action::Skill3) && player.skills[2].isReady()) {
         player.useSkill(2, mouseWorld);
         tutorial.onSkillUsed();
         float gDmg = player.skills[2].damage * (player.isOverloaded() ? 1.5f : 1.0f);
@@ -1743,7 +1762,7 @@ void Game::handleInput(float dt) {
     }
 
     // Skill 4 - Sobrecarga
-    if (IsKeyPressed(KEY_FOUR) && player.skills[3].isReady()) {
+    if (input.isPressedOnce(Action::Skill4) && player.skills[3].isReady()) {
         player.useSkill(3, mouseWorld);
         tutorial.onSkillUsed();
         player.overloadTimer = 8.0f + SkillTree::statsFor(player.perkMask).overloadBonus;
@@ -1753,7 +1772,7 @@ void Game::handleInput(float dt) {
     }
 
     // Skill 5 - Barreira de Escudo (imune 4s)
-    if (IsKeyPressed(KEY_FIVE) && player.skills[4].isReady()) {
+    if (input.isPressedOnce(Action::Skill5) && player.skills[4].isReady()) {
         player.useSkill(4, mouseWorld);
         tutorial.onSkillUsed();
         player.shieldTimer = 4.0f;
@@ -1762,7 +1781,7 @@ void Game::handleInput(float dt) {
     }
 
     // Skill 6 - Rajada (8 projetos em leque; Sistema Predador adiciona mais)
-    if (IsKeyPressed(KEY_SIX) && player.skills[5].isReady()) {
+    if (input.isPressedOnce(Action::Skill6) && player.skills[5].isReady()) {
         player.useSkill(5, mouseWorld);
         tutorial.onSkillUsed();
         float baseAngle = std::atan2(aimDir.y, aimDir.x);
@@ -1824,7 +1843,7 @@ void Game::handleInput(float dt) {
     // E = conversar com o NPC proximo (TODOS contam sua historia em baloes).
     // Vendedores tambem conversam; a loja deles abre com [TAB].
     // [E] ou CLIQUE ESQUERDO (com diálogo aberto) avança a fala; ESC fecha.
-    bool advanceDialog = IsKeyPressed(KEY_E) || (dialogOpen && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !producedThisClick);
+    bool advanceDialog = input.isPressedOnce(Action::Interact) || (dialogOpen && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !producedThisClick);
     if (advanceDialog) {
         if (nearNpcIndex >= 0 && nearNpcIndex < (int)npcs.size()) {
             int nLines = (int)npcs[nearNpcIndex].dialogLines.size();

@@ -196,7 +196,7 @@ void Game::drawMainMenu() const {
         if (i < 4) DrawText("//", fx - 4, screenHeight - 27, 10,
                             ColorAlpha({0,235,255,255}, 0.32f));
     }
-    DrawText("DARKNET SIMULATOR // RELEASE 0.4", 16, screenHeight - 24, 11,
+    DrawText("KRONOSFALL SIMULATOR // RELEASE 0.4", 16, screenHeight - 24, 11,
              ColorAlpha({120,150,190,255}, 0.5f));
 
     EndTextureMode();

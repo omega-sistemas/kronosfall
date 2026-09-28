@@ -134,7 +134,7 @@ Game::Game(bool headless_, int startPhaseOverride_) {
     // letterbox em presentFrame(), entao nunca corta. F11 alterna tela cheia.
     if (!headless) {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(screenWidth, screenHeight, "KRONOSFALL - ARPG | The Darknet is falling");
+    InitWindow(screenWidth, screenHeight, "KRONOSFALL - ARPG | The Darknet is falling. Make Kronos fall.");
     SetExitKey(KEY_NULL);   // ESC NAO fecha o jogo — abre o menu de pause
     SetTargetFPS(60);
 
@@ -1203,23 +1203,42 @@ void Game::checkCollisions() {
     // Player projectiles vs enemies
     for (auto& proj : projectiles) {
         if (!proj.active) continue;
-        if (proj.isGrenade) continue; // handled in updateProjectiles on expire
 
         for (auto& enemy : enemies) {
-            if (enemy.isDead()) continue;   // nao desperdicar tiro em cadaver pendente
+            if (enemy.isDead()) continue;
             // ao quadrado: evita um sqrt por par projetil x inimigo (loop O(n*m) quente)
             float ddx = proj.position.x - enemy.position.x;
             float ddy = proj.position.y - enemy.position.y;
             float rsum = enemy.radius + proj.radius;
             if (ddx*ddx + ddy*ddy <= rsum*rsum) {
-                enemy.takeDamage(proj.damage);
-                particles.spawnHit(enemy.position, Color{0,255,255,255}, 6);
-                proj.active = false;
-                audio.playHit();
-                comboCount++;
-                comboTimer = 2.5f;
-                Color projDmgCol = comboCount >= 5 ? Color{0,255,200,255} : Color{0,255,255,255};
-                damageNumbers.push_back({enemy.position, proj.damage, projDmgCol, 1.0f});
+                // Grenade: explode on impact
+                if (proj.isGrenade) {
+                    if (!proj.exploded) {
+                        proj.exploded = true;
+                        for (auto& e : enemies) {
+                            if (Vector2Distance(proj.position, e.position) <= proj.explodeRadius) {
+                                e.takeDamage(proj.damage);
+                                particles.spawnHit(e.position, Color{255,120,0,255}, 12);
+                                audio.playHit();
+                            }
+                        }
+                        particles.spawnExplosion(proj.position, Color{255,140,0,255}, 35);
+                        audio.playExplosion();
+                        triggerShake(6.0f, 0.25f);
+                        hitStopTimer = 0.07f;
+                        camPunch = std::max(camPunch, 0.07f);
+                    }
+                    proj.active = false;
+                } else {
+                    enemy.takeDamage(proj.damage);
+                    particles.spawnHit(enemy.position, Color{0,255,255,255}, 6);
+                    proj.active = false;
+                    audio.playHit();
+                    comboCount++;
+                    comboTimer = 2.5f;
+                    Color projDmgCol = comboCount >= 5 ? Color{0,255,200,255} : Color{0,255,255,255};
+                    damageNumbers.push_back({enemy.position, proj.damage, projDmgCol, 1.0f});
+                }
                 break;
             }
         }

@@ -8,11 +8,11 @@
 // ─── Loja Premium (Gems / Stripe via backend Node) ───────────────────────────
 
 // Endpoint da API REST. Default: direto no game-server local (dev, porta 9000,
-// sem TLS). Em produção aponte DARKNET_API_URL para o gateway nginx — o cliente
+// sem TLS). Em produção aponte KRONOSFALL_API_URL para o gateway nginx — o cliente
 // passa a usar o prefixo /api (o nginx re-mapeia /api/* -> game-server) e TLS
-// quando a URL for https://. O WebSocket usa DARKNET_WS_URL (ver Game_Network).
+// quando a URL for https://. O WebSocket usa KRONOSFALL_WS_URL (ver Game_Network).
 static void applyApiConfig(StoreClient& store) {
-    const char* raw = getenv("DARKNET_API_URL");
+    const char* raw = getenv("KRONOSFALL_API_URL");
     if (!raw || !*raw) return;   // default: dev local direto
     std::string u = raw;
     const bool tls = (u.rfind("https://", 0) == 0);
@@ -36,11 +36,11 @@ void Game::startStore() {
     if (storeStarted) return;
     storeStarted = true;
     applyApiConfig(store);
-    // Auth real: usa DARKNET_LOGIN_EMAIL/PASSWORD se definidas; senao, credenciais
+    // Auth real: usa KRONOSFALL_LOGIN_EMAIL/PASSWORD se definidas; senao, credenciais
     // dummy. A loja premium so funciona apos registro real no servidor.
-    const char* envEmail = getenv("DARKNET_LOGIN_EMAIL");
-    const char* envPass  = getenv("DARKNET_LOGIN_PASSWORD");
-    std::string email = envEmail ? envEmail : "player@darknet.local";
+    const char* envEmail = getenv("KRONOSFALL_LOGIN_EMAIL");
+    const char* envPass  = getenv("KRONOSFALL_LOGIN_PASSWORD");
+    std::string email = envEmail ? envEmail : "player@kronosfall.local";
     std::string pass  = envPass  ? envPass  : "dummy123";
     store.loginAsync(email, pass); // login -> token + saldo
     store.fetchStoreAsync();                                // catalogo de itens/packs

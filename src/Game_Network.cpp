@@ -11,9 +11,9 @@
 // ─── Multiplayer LAN (NetClient) ─────────────────────────────────────────────
 
 // URL do WebSocket: por padrão direto no game-server local (dev). Em produção
-// aponte DARKNET_WS_URL para o gateway (ex.: ws://darknet.seudominio.com/ws).
+// aponte KRONOSFALL_WS_URL para o gateway (ex.: ws://kronosfall.seudominio.com/ws).
 static std::string wsUrl() {
-    const char* u = getenv("DARKNET_WS_URL");
+    const char* u = getenv("KRONOSFALL_WS_URL");
     return (u && *u) ? u : "ws://127.0.0.1:9000/ws";
 }
 
